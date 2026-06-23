@@ -1,6 +1,5 @@
 package dev.kmpilot.todo
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import com.arkivanov.decompose.DefaultComponentContext
@@ -14,7 +13,7 @@ import dev.kmpilot.todo.di.appModule
 import dev.kmpilot.todo.domain.AlarmInterval
 import dev.kmpilot.todo.domain.Task
 import dev.kmpilot.todo.presentation.RootComponent
-import dev.kmpilot.todo.ui.RootContent
+import dev.kmpilot.todo.ui.App
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +59,7 @@ fun main() {
     // Full-window into document.body (Compose-for-wasm's happy path); the phone frame (index.html) iframes
     // and sizes this app. A sized sub-element paints blank on Chromium/Skiko — verified — so we don't.
     ComposeViewport(document.body!!) {
-        MaterialTheme { RootContent(root) }
+        App(root)
     }
 }
 

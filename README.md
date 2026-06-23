@@ -83,6 +83,21 @@ fine in Firefox). The full-window `document.body` overload is JetBrains' own kno
 app); the iframe just constrains its viewport to a phone. Do a **hard refresh** (Ctrl+Shift+R) after a
 rebuild — the `.wasm` filename is content-hashed and `todo-lab.js` is cached by name.
 
+## The real mobile targets — Android + iOS
+This app is now a **true multiplatform** app: the same `commonMain` Compose UI compiles and runs natively on
+**Android** and **iOS**, with the **wasm** build kept as the in-browser preview/emulator. Each platform has a thin
+entrypoint that calls the shared `ui/App.kt` `App(buildRoot())`:
+- **Android** — `MainActivity` (`setContent { App(buildRoot()) }`); `./gradlew assembleDebug` → APK (needs the Android SDK).
+- **iOS** — `MainViewController()` hosted by the SwiftUI `iosApp/` (an XcodeGen `project.yml`; the `.xcodeproj` is
+  generated in CI). Build on a Mac, or **free on CI** via the **Actions → "iOS (free simulator build)"** workflow
+  (`.github/workflows/ios.yml`) — it compiles an iOS **Simulator** `.app` on a GitHub-hosted macOS runner (no signing)
+  and uploads it as an artifact (add an `APPETIZE_TOKEN` secret to stream a browser link).
+
+> **Mobile persistence (least-risk launch):** `buildRoot()` binds the **in-memory** `TaskRepository` (seeded with the
+> same default tasks as the wasm preview) so the task list works immediately on Android + iOS. The SQLDelight local-SQL
+> default is JVM-tested; swapping a platform `SqlDriver` (`NativeSqliteDriver` on iOS, `AndroidSqliteDriver` on Android)
+> behind the same DI seam is the next slice — the rest of the app is unchanged.
+
 ## Test harness (commonMain logic only — not a way to "run the app")
 ```bash
 ./gradlew jvmTest --console=plain  # 29 tests: domain + persistence (4 adapters, +paging) + DI + statechart + headless Compose UI

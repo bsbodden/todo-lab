@@ -1,0 +1,32 @@
+# XcodeGen spec — generates iosApp.xcodeproj in CI (avoids a hand-authored, fragile project.pbxproj).
+# Links the pre-built Kotlin/Native framework (TodoApp) for the iOS Simulator. `xcodegen generate` in the
+# workflow produces the .xcodeproj; xcodebuild then builds the .app (no signing → the free Appetize path).
+name: iosApp
+options:
+  bundleIdPrefix: dev.kmpilot
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  iosApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+    settings:
+      base:
+        PRODUCT_NAME: Todo
+        PRODUCT_BUNDLE_IDENTIFIER: dev.kmpilot.todo
+        # explicit Info.plist — must carry CADisableMinimumFrameDurationOnPhone (Compose iOS sanity check)
+        INFOPLIST_FILE: iosApp/Info.plist
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # the Kotlin framework, pre-built by `./gradlew linkDebugFrameworkIosSimulatorArm64`
+        FRAMEWORK_SEARCH_PATHS:
+          - $(inherited)
+          - $(PROJECT_DIR)/../build/bin/iosSimulatorArm64/debugFramework
+    dependencies:
+      - framework: ../build/bin/iosSimulatorArm64/debugFramework/TodoApp.framework
+        embed: true
+        codeSign: false

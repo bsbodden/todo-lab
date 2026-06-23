@@ -6,6 +6,7 @@ plugins {
     kotlin("plugin.compose") version "2.4.0"
     id("org.jetbrains.compose") version "1.11.1"
     id("app.cash.sqldelight") version "2.3.2"
+    id("com.android.application") version "8.13.2" // last AGP 8.x — still supports single-module KMP (AGP 9 dropped it)
 }
 
 repositories {
@@ -38,6 +39,11 @@ kotlin {
         binaries.executable()
     }
     jvm()
+    androidTarget() // the Android target → APK (buildable on this Linux box with the SDK)
+    // iOS targets — the REAL mobile target. Declaring them is fine on Linux; only the compile/link needs macOS.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework { baseName = "TodoApp"; isStatic = true }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -85,6 +91,23 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
+        val androidMain by getting {
+            dependencies {
+                implementation("androidx.activity:activity-compose:1.10.1")
+            }
+        }
+    }
+}
+
+android {
+    namespace = "dev.kmpilot.todo"
+    compileSdk = 35
+    defaultConfig {
+        applicationId = "dev.kmpilot.todo"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
     }
 }
 
