@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>todo-lab · KMPilot Mobile Preview</title>
+    <style>
+        :root { --bezel: #0b0d12; --page: #11141b; --accent: #8ab4ff; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; height: 100%; }
+        body {
+            background: radial-gradient(1200px 800px at 50% -10%, #1b2030 0%, var(--page) 60%);
+            color: #e7eaf0;
+            font: 14px/1.4 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100%;
+        }
+        header { display: flex; align-items: center; gap: 14px; padding: 18px 20px 14px; width: 100%; max-width: 980px; }
+        header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+        header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .2px; }
+        header h1 span { color: #8b93a7; font-weight: 400; }
+        header .spacer { flex: 1; }
+        header label { color: #8b93a7; font-size: 12px; margin-right: 6px; }
+        select { background: #1a1f2b; color: #e7eaf0; border: 1px solid #2a3140; border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer; }
+        .stage { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; padding: 8px 16px 28px; overflow: hidden; }
+        .phone {
+            transform-origin: center center;
+            position: relative; background: var(--bezel); border-radius: 44px; padding: 12px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 0 0 2px #232938, 0 0 0 1px #000;
+        }
+        .phone::before {  /* notch */
+            content: ""; position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            width: 128px; height: 26px; background: var(--bezel); border-radius: 0 0 16px 16px; z-index: 3; pointer-events: none;
+        }
+        .screen { position: relative; overflow: hidden; border-radius: 34px; background: #fff; transition: width .2s ease, height .2s ease; }
+        /* the full-window Compose app, sandboxed to the phone viewport */
+        #frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+        .loading {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #6b7280; font-size: 13px; gap: 10px; z-index: 1; pointer-events: none; background: #fff;
+        }
+        .spinner { width: 16px; height: 16px; border: 2px solid #cbd5e1; border-top-color: #6b7280; border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        footer { color: #5b6273; font-size: 11px; padding-bottom: 18px; text-align: center; }
+        code { color: #9fb4d8; }
+        /* shown inside the phone when the browser has no usable WebGL (Compose/Skiko can't render) */
+        .nogl { position:absolute; inset:0; z-index:5; background:#fff; color:#1f2430;
+            display:flex; flex-direction:column; gap:14px; align-items:flex-start; justify-content:center;
+            padding:28px; font-size:13px; line-height:1.5; }
+        .nogl h2 { margin:0; font-size:16px; color:#b4232a; }
+        .nogl code { color:#3a52a0; background:#eef1f8; padding:1px 5px; border-radius:4px; }
+        .nogl ol { margin:4px 0 0; padding-left:18px; } .nogl li { margin:4px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="dot"></span>
+        <h1>KMPilot Mobile Preview <span>· todo-lab — Compose Multiplatform → Wasm</span></h1>
+        <span class="spacer"></span>
+        <label for="scenario">Scenario</label>
+        <select id="scenario">
+            <option value="default">Default (3 tasks)</option>
+            <option value="empty">Empty</option>
+            <option value="many">Many (25)</option>
+            <option value="error">Backend error</option>
+        </select>
+        <label for="device" style="margin-left:14px">Device</label>
+        <select id="device">
+            <option value="393x852">iPhone 15 · 393×852</option>
+            <option value="412x915">Pixel 8 · 412×915</option>
+            <option value="375x667">iPhone SE · 375×667</option>
+            <option value="360x800">Galaxy S · 360×800</option>
+        </select>
+    </header>
+
+    <div class="stage">
+        <div class="phone">
+            <div class="screen" id="screen" style="width:393px;height:852px;">
+                <div class="loading" id="loading"><span class="spinner"></span> compiling Compose UI…</div>
+                <iframe id="frame" src="./app.html" title="todo-lab"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Same <code>commonMain</code> Compose UI a KMP Android/iOS app renders · in-memory persistence adapter ·
+        nav on the browser UI thread (Decompose)
+    </footer>
+
+    <script>
+        // Compose Multiplatform / Skiko renders via WebGL. Chrome 130+ no longer falls back to software,
+        // so if WebGL is unavailable (GPU off / blocklisted) the canvas is silently blank. Detect and explain.
+        function hasWebGL() {
+            try { const c = document.createElement('canvas');
+                return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl')); }
+            catch (_) { return false; }
+        }
+        if (!hasWebGL()) {
+            document.getElementById('screen').innerHTML =
+                '<div class="nogl">' +
+                '<h2>⚠️ WebGL is unavailable in this browser</h2>' +
+                '<div>The Compose preview renders through WebGL (Skiko). Chrome 130+ will not fall back to ' +
+                'software rendering, so the canvas comes up blank. To fix it in Chrome:</div>' +
+                '<ol>' +
+                '<li>Open <code>chrome://settings/system</code> → turn <b>ON</b> “Use graphics acceleration when available”, then <b>Relaunch</b>.</li>' +
+                '<li>Still blank? Open <code>chrome://gpu</code> — if WebGL shows “Disabled/Software only”, enable <code>chrome://flags/#enable-unsafe-swiftshader</code> → <b>Relaunch</b>.</li>' +
+                '<li>Or just open this page in <b>Firefox</b> — its WebGL works out of the box.</li>' +
+                '</ol></div>';
+        }
+        // Scale the phone down to fit the viewport (so it never overflows / clips on shorter windows).
+        const stage = document.querySelector('.stage');
+        const phone = document.querySelector('.phone');
+        function fitPhone() {
+            phone.style.transform = 'scale(1)';
+            const s = Math.min(1, (stage.clientHeight - 16) / phone.offsetHeight, (stage.clientWidth - 16) / phone.offsetWidth);
+            phone.style.transform = 'scale(' + s + ')';
+        }
+        window.addEventListener('resize', fitPhone);
+        fitPhone();
+
+        // Supported-device toggle — resizes the screen+iframe; the inner Compose app re-lays-out on window resize.
+        const screen = document.getElementById('screen');
+        document.getElementById('device').addEventListener('change', (e) => {
+            const [w, h] = e.target.value.split('x');
+            screen.style.width = w + 'px';
+            screen.style.height = h + 'px';
+            fitPhone();
+        });
+        // Hide the loading hint once the inner app's canvas has actually painted (same-origin iframe).
+        // Compose Multiplatform 1.11+ renders into a canvas inside a SHADOW ROOT, so a plain
+        // querySelector('canvas') no longer finds it — we pierce shadow roots.
+        const frame = document.getElementById('frame');
+        const loading = document.getElementById('loading');
+        function findCanvas(root) {
+            if (!root) return null;
+            const direct = root.querySelector && root.querySelector('canvas');
+            if (direct) return direct;
+            const all = root.querySelectorAll ? root.querySelectorAll('*') : [];
+            for (const el of all) { if (el.shadowRoot) { const f = findCanvas(el.shadowRoot); if (f) return f; } }
+            return null;
+        }
+        // Show the overlay and poll until the (re)loaded app's canvas paints. Re-runs on every scenario reload.
+        function watchForCanvas() {
+            loading.style.display = 'flex';
+            let tries = 0;
+            const poll = setInterval(() => {
+                tries++;
+                try {
+                    const canvas = findCanvas(frame.contentDocument);
+                    if (canvas && canvas.width > 0) { loading.style.display = 'none'; clearInterval(poll); }
+                } catch (_) { /* still loading */ }
+                if (tries > 200) { loading.style.display = 'none'; clearInterval(poll); } // ~20s safety
+            }, 100);
+        }
+        watchForCanvas();
+
+        // Scenario / precondition selector — reloads the app into a named precondition (fixture + entry state).
+        // This is the "LLM seeds a precondition, see it in the frame" loop; also exposed as __setScenario(name).
+        function setScenario(name) {
+            frame.src = './app.html?scenario=' + encodeURIComponent(name);
+            const sel = document.getElementById('scenario');
+            if (sel.value !== name) sel.value = name;
+            watchForCanvas();
+        }
+        document.getElementById('scenario').addEventListener('change', (e) => setScenario(e.target.value));
+        globalThis.__setScenario = setScenario;
+    </script>
+</body>
+</html>

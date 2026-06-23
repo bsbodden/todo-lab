@@ -1,0 +1,18 @@
+{
+  "name": "todo-lab-preview-tests",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Device-level tests for the wasm mobile preview: model-based UI + scenario/precondition boots.",
+  "scripts": {
+    "test": "node model-based-ui.mjs && node scenarios.mjs",
+    "test:model": "node model-based-ui.mjs",
+    "test:scenarios": "node scenarios.mjs",
+    "test:minimap": "node minimap.mjs",
+    "test:interactions": "node interactions.mjs",
+    "test:catalog": "node catalog.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.0"
+  }
+}

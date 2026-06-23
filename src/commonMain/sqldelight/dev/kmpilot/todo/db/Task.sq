@@ -1,0 +1,43 @@
+import dev.kmpilot.todo.domain.AlarmInterval;
+import kotlin.Boolean;
+import kotlinx.datetime.LocalDateTime;
+
+-- Storage shape for the domain Task. Custom types (LocalDateTime, AlarmInterval, Boolean) are mapped
+-- via column adapters wired in the repository; the domain model itself stays framework-free.
+CREATE TABLE TaskEntity (
+    id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    title         TEXT    NOT NULL,
+    description   TEXT,
+    categoryId    INTEGER,
+    dueDate       TEXT    AS LocalDateTime,
+    creationDate  TEXT    AS LocalDateTime,
+    completedDate TEXT    AS LocalDateTime,
+    isCompleted   INTEGER AS Boolean NOT NULL DEFAULT 0,
+    isRepeating   INTEGER AS Boolean NOT NULL DEFAULT 0,
+    alarmInterval TEXT    AS AlarmInterval
+);
+
+selectAll:
+SELECT * FROM TaskEntity ORDER BY id;
+
+selectById:
+SELECT * FROM TaskEntity WHERE id = ?;
+
+-- Keyset page: ids are AUTOINCREMENT (always ≥ 1), so afterId = 0 means "from the start" — no NULL handling.
+selectPage:
+SELECT * FROM TaskEntity WHERE id > :afterId ORDER BY id LIMIT :limit;
+
+insert:
+INSERT INTO TaskEntity(title, description, categoryId, dueDate, creationDate, completedDate, isCompleted, isRepeating, alarmInterval)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+lastInsertedId:
+SELECT last_insert_rowid();
+
+update:
+UPDATE TaskEntity
+SET title = ?, description = ?, categoryId = ?, dueDate = ?, creationDate = ?, completedDate = ?, isCompleted = ?, isRepeating = ?, alarmInterval = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM TaskEntity WHERE id = ?;
