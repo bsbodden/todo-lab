@@ -8,6 +8,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import dev.kmpilot.todo.auth.AuthPort
 import dev.kmpilot.todo.data.BackendSelector
+import dev.kmpilot.todo.data.fromEnv
 import dev.kmpilot.todo.data.TaskRepository
 import dev.kmpilot.todo.di.Now
 import dev.kmpilot.todo.di.appModule

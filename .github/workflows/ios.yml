@@ -30,6 +30,9 @@ jobs:
           distribution: zulu
           java-version: "21"
 
+      - name: Ensure Android compileSdk 36 (supabase-kt pulls androidx.browser; gradle config evaluates the android target)
+        run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" 2>/dev/null | tail -1 || true
+
       - name: Ensure the Gradle wrapper jar exists
         # a global `*.jar` gitignore commonly drops gradle-wrapper.jar from a copied repo; fetch it if absent
         # (the wrapper jar is version-agnostic — it just bootstraps the distributionUrl in the .properties)

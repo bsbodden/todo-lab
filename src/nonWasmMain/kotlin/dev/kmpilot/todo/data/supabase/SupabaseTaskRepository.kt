@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlin.random.Random
+import kotlin.time.TimeSource
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -110,6 +112,10 @@ class SupabaseTaskRepository(private val client: SupabaseClient) : TaskRepositor
     // namely the suspend `removeChannel` in observeAll's awaitClose. It outlives any single collection.
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    // Multiplatform monotonic mark for minting unique channel names (replaces the jvm-only System.nanoTime()).
+    private val timeSource = TimeSource.Monotonic
+    private val started = timeSource.markNow()
+
     override suspend fun all(): List<Task> =
         tasks.select { order("id", Order.ASCENDING) }
             .decodeList<TaskRow>()
@@ -159,7 +165,10 @@ class SupabaseTaskRepository(private val client: SupabaseClient) : TaskRepositor
      * window. With [Auth] installed, the user's access_token rides the socket → the server pushes only this user's rows.
      */
     override fun observeAll(): Flow<List<Task>> = channelFlow {
-        val channel = client.channel("tasks-observe-${System.nanoTime()}")
+        // Unique channel name per collection. Multiplatform (no jvm System.nanoTime): a monotonic elapsed-nanos delta
+        // plus a random suffix — enough to keep concurrent channels on one client from colliding (a name, not a clock).
+        val token = "${started.elapsedNow().inWholeNanoseconds}-${Random.nextInt(0, Int.MAX_VALUE)}"
+        val channel = client.channel("tasks-observe-$token")
 
         // 1) Build the change flow BEFORE subscribing (postgresChangeFlow after JOIN throws IllegalStateException).
         val changes = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
