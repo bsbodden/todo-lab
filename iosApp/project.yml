@@ -22,6 +22,11 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # SQLDelight's iOS native driver (touchlab/sqliter) references libsqlite3 symbols from the Kotlin
+        # framework; the app must link the system SQLite or it fails with "Undefined symbols: _sqlite3_*".
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - -lsqlite3
         # the Kotlin framework, pre-built by `./gradlew linkDebugFrameworkIosSimulatorArm64`
         FRAMEWORK_SEARCH_PATHS:
           - $(inherited)
