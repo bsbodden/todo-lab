@@ -7,7 +7,9 @@ package dev.kmpilot.todo.data
  * BuildConfig / a settings screen instead, calling [BackendSelector.select] directly.
  *
  *  - `BACKEND=supabase` → the real backend, with `SUPABASE_URL` / `SUPABASE_ANON_KEY` overriding the local-stack
- *    defaults when set; anything else → the local scaffold (zero-config dev).
+ *    defaults when set;
+ *  - `BACKEND=firebase` → the jvm-only Firebase arm (GitLive SDK against the local Emulator Suite; see
+ *    [BackendSelector.firebase]); anything else → the local scaffold (zero-config dev).
  */
 fun BackendSelector.fromEnv(): Backend =
     when (System.getenv("BACKEND")?.trim()?.lowercase()) {
@@ -15,5 +17,6 @@ fun BackendSelector.fromEnv(): Backend =
             apiUrl = System.getenv("SUPABASE_URL") ?: BackendSelector.LOCAL_API_URL,
             anonKey = System.getenv("SUPABASE_ANON_KEY") ?: BackendSelector.LOCAL_ANON_KEY,
         )
+        "firebase" -> firebase()
         else -> local()
     }

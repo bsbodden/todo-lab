@@ -17,3 +17,9 @@ iosApp/iosApp.xcodeproj/
 iosApp/build/
 **/xcuserdata/
 .DS_Store
+
+# firebase emulator runtime
+*-debug.log
+.firebase/
+firestore-debug.log
+ui-debug.log

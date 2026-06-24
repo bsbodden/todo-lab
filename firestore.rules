@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // `tasks` are owner-private — Firebase's equivalent of the Supabase RLS `owner_id = auth.uid()`, generated from
+    // the same DDD domain ownership rule. The database is the trusted enforcer; the client carries no ownership logic
+    // beyond constraining its query.
+    //
+    // NOTE the model difference vs Postgres RLS: Firestore rules VALIDATE a query rather than auto-filtering it — so
+    // the client MUST constrain reads to its own docs (`where("ownerId","==",request.auth.uid)`), and the rule permits
+    // only that. (Supabase RLS instead silently scopes an unfiltered SELECT.) Same isolation, different mechanism.
+    //
+    // The `resource != null` guard is load-bearing, not decoration: a `get` of a NON-EXISTENT (or already-deleted)
+    // document binds `resource` to null, so `resource.data.ownerId` would raise a runtime "Null value error" →
+    // PERMISSION_DENIED *for the wrong reason* (an evaluation error, not a clean deny). Short-circuiting on
+    // `resource != null` makes a missing/foreign doc a clean DENY (`false`), so the adapter's `byId(missing)`
+    // returns null instead of throwing — the same silent-miss the local scaffold's decorator gives.
+    match /tasks/{taskId} {
+      allow read:           if request.auth != null && resource != null && resource.data.ownerId == request.auth.uid;
+      allow create:         if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource != null && resource.data.ownerId == request.auth.uid;
+    }
+  }
+}

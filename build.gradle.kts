@@ -120,6 +120,14 @@ kotlin {
                 // WS-capable jvm Ktor engine for supabase-kt's Realtime (OkHttp is supabase-kt's reference engine;
                 // it matches Android and speaks WS reliably, so the cross-client push proof doesn't flake on WS frames).
                 implementation("io.ktor:ktor-client-okhttp:3.5.0")
+                // SECOND real backend, jvm-ONLY (the GitLive firebase-kotlin-sdk conformance proof). On JVM the
+                // `-jvm` artifacts forward to dev.gitlive:firebase-java-sdk (a pure-Java port — no Play-services /
+                // native binaries), so Firebase Auth + Firestore run against the local Emulator Suite with no Android
+                // Context and no Mac. This stays in jvmMain (NOT nonWasmMain) because device-multiplatform Firebase
+                // needs the cocoapods iOS side — a documented FOLLOW-UP. Both base coords resolve their `-jvm` variant
+                // and transitively bring firebase-java-sdk:0.6.3 + kotlinx-coroutines-play-services.
+                implementation("dev.gitlive:firebase-auth:2.4.0")      // GitLive Auth → FirebaseAuthAdapter
+                implementation("dev.gitlive:firebase-firestore:2.4.0") // GitLive Firestore → FirebaseTaskRepository
             }
         }
         val androidMain by getting {
