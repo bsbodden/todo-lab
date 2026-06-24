@@ -46,7 +46,7 @@ fun main() {
 
     // Session-gated like the real app. The scaffold auth + a ScopedTaskRepository wrap the scenario fixture so
     // the preview exercises the SAME login gate + local-RLS path the mobile targets do.
-    val auth: AuthPort = LocalAuthScaffold { now() }
+    val auth: AuthPort = LocalAuthScaffold(now = { now() })
     val koin = startKoin {
         modules(
             appModule,

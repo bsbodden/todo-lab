@@ -94,6 +94,14 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation("androidx.activity:activity-compose:1.10.1")
+                implementation("app.cash.sqldelight:android-driver:2.3.2") // AndroidSqliteDriver → on-device persistence
+            }
+        }
+        // The default KMP hierarchy template synthesizes iosMain (shared by iosArm64 + iosSimulatorArm64); it is
+        // created lazily, so reach it via invoke {} rather than `by getting` (which evaluates too early).
+        iosMain {
+            dependencies {
+                implementation("app.cash.sqldelight:native-driver:2.3.2") // NativeSqliteDriver → on-device persistence
             }
         }
     }

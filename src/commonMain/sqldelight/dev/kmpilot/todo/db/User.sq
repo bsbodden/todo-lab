@@ -1,0 +1,23 @@
+-- Storage shape for the local-auth scaffold's users table (the durable swap for LocalAuthScaffold's
+-- in-memory map). passwordHash + salt are stored separately so a SQL row round-trips the same hashed-only
+-- contract the in-memory store keeps — NEVER plaintext. A real backend hashes server-side with a slow KDF.
+CREATE TABLE UserEntity (
+    id           TEXT NOT NULL PRIMARY KEY,
+    email        TEXT NOT NULL UNIQUE,
+    displayName  TEXT NOT NULL,
+    passwordHash TEXT NOT NULL,
+    salt         TEXT NOT NULL
+);
+
+insertUser:
+INSERT INTO UserEntity(id, email, displayName, passwordHash, salt)
+VALUES (?, ?, ?, ?, ?);
+
+selectByEmail:
+SELECT * FROM UserEntity WHERE email = ?;
+
+selectById:
+SELECT * FROM UserEntity WHERE id = ?;
+
+selectAll:
+SELECT * FROM UserEntity ORDER BY id;

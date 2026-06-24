@@ -78,6 +78,7 @@ class SqlDelightTaskRepository(
                     isCompleted = task.isCompleted,
                     isRepeating = task.isRepeating,
                     alarmInterval = task.alarmInterval,
+                    ownerId = task.ownerId,
                 )
                 task.copy(id = queries.lastInsertedId().executeAsOne())
             } else {
@@ -91,6 +92,7 @@ class SqlDelightTaskRepository(
                     isCompleted = task.isCompleted,
                     isRepeating = task.isRepeating,
                     alarmInterval = task.alarmInterval,
+                    ownerId = task.ownerId,
                     id = task.id,
                 )
                 task
@@ -123,4 +125,5 @@ private fun TaskEntity.toDomain() = Task(
     isCompleted = isCompleted,
     isRepeating = isRepeating,
     alarmInterval = alarmInterval,
+    ownerId = ownerId,
 )
