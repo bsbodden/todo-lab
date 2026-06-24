@@ -89,6 +89,13 @@ kotlin {
                 implementation("org.xerial:sqlite-jdbc:3.47.1.0")   // local-SQL adapter (JVM test harness)
                 implementation("app.cash.sqldelight:sqlite-driver:2.3.2") // JdbcSqliteDriver for the SQLDelight adapter
                 implementation(compose.desktop.currentOs)
+                // The REAL backend-SWAP adapter (jvm-only proof; off wasm/android/ios to dodge the ktor-wasm/
+                // kotlinx-browser pins). supabase-kt 3.6.0 is built against ktor 3.4.3 + kotlinx-serialization 1.11.0
+                // (the version commonMain already uses); ktor 3.5.0 (already on the classpath via ktor-client-core) is
+                // binary-compatible, so the CIO engine is pinned to 3.5.0 to match the resolved core.
+                implementation("io.github.jan-tennert.supabase:auth-kt:3.6.0")      // GoTrue → SupabaseAuthAdapter
+                implementation("io.github.jan-tennert.supabase:postgrest-kt:3.6.0") // PostgREST → SupabaseTaskRepository
+                implementation("io.ktor:ktor-client-cio:3.5.0")                     // jvm Ktor engine for supabase-kt
             }
         }
         val androidMain by getting {
