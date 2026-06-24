@@ -95,6 +95,10 @@ kotlin {
                 // binary-compatible, so the CIO engine is pinned to 3.5.0 to match the resolved core.
                 implementation("io.github.jan-tennert.supabase:auth-kt:3.6.0")      // GoTrue → SupabaseAuthAdapter
                 implementation("io.github.jan-tennert.supabase:postgrest-kt:3.6.0") // PostgREST → SupabaseTaskRepository
+                implementation("io.github.jan-tennert.supabase:realtime-kt:3.6.0")  // Postgres-Changes WS → observeAll() realtime
+                // Realtime is a WebSocket; the CIO engine speaks WS, but supabase-kt's Realtime is most reliable on
+                // OkHttp (its reference engine). Use OkHttp here so the cross-client push proof doesn't flake on WS frames.
+                implementation("io.ktor:ktor-client-okhttp:3.5.0")                  // WS-capable jvm Ktor engine for Realtime
                 implementation("io.ktor:ktor-client-cio:3.5.0")                     // jvm Ktor engine for supabase-kt
             }
         }

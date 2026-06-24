@@ -6,8 +6,20 @@ import dev.kmpilot.todo.domain.Task
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -94,6 +106,10 @@ class SupabaseTaskRepository(private val client: SupabaseClient) : TaskRepositor
 
     private val tasks get() = client.postgrest["tasks"]
 
+    // A long-lived scope for cleanup work that must NOT be cancelled with the (already-cancelling) flow collector —
+    // namely the suspend `removeChannel` in observeAll's awaitClose. It outlives any single collection.
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override suspend fun all(): List<Task> =
         tasks.select { order("id", Order.ASCENDING) }
             .decodeList<TaskRow>()
@@ -124,6 +140,52 @@ class SupabaseTaskRepository(private val client: SupabaseClient) : TaskRepositor
         tasks.delete { filter { eq("id", id) } }
     }
 
-    /** Realtime is a later slice; emit the current snapshot once so the reactive contract still holds. */
-    override fun observeAll(): Flow<List<Task>> = flow { emit(all()) }
+    /**
+     * REAL cross-client realtime — the server-side half of the reactive contract. The local scaffold's
+     * [dev.kmpilot.todo.data.InMemoryTaskRepository.observeAll] (a `MutableStateFlow.asStateFlow`) is single-client
+     * reactive: it only re-emits when *this* process mutates the state. Cross-client push is the SERVER's job — that's
+     * the rendezvous boundary the backend SWAP crosses. Here Supabase Realtime (Postgres-Changes over a WebSocket)
+     * delivers another client's writes to us, so two devices signed in as the same user stay in sync with no polling.
+     *
+     * Pattern (the RLS-correct one): emit the initial RLS-scoped [select] snapshot, then RE-QUERY the whole list on
+     * every INSERT/UPDATE/DELETE event and emit the fresh result. Re-querying (rather than applying the delta) keeps us
+     * correct under RLS — the change payload alone can drift from the true post-RLS list (UPDATE/DELETE may carry only
+     * the PK), but a fresh `select()` is itself RLS-scoped to the caller's JWT. [channelFlow] runs the change collector
+     * in a child coroutine; [awaitClose] unsubscribes + disposes the channel on cancel. `distinctUntilChanged` absorbs
+     * the tiny initial-snapshot / first-event overlap and any no-op re-emits.
+     *
+     * Ordering matters: build `postgresChangeFlow` BEFORE `subscribe()` (calling it after the channel has joined throws),
+     * and emit the initial snapshot AFTER the JOIN ack (`blockUntilSubscribed = true`) so no event is missed in the join
+     * window. With [Auth] installed, the user's access_token rides the socket → the server pushes only this user's rows.
+     */
+    override fun observeAll(): Flow<List<Task>> = channelFlow {
+        val channel = client.channel("tasks-observe-${System.nanoTime()}")
+
+        // 1) Build the change flow BEFORE subscribing (postgresChangeFlow after JOIN throws IllegalStateException).
+        val changes = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "tasks"
+        }
+
+        // 2) Re-query the full RLS-scoped list on every change event and emit it.
+        val job = changes
+            .onEach { trySend(all()) }
+            .launchIn(this)
+
+        // 3) Push the CURRENT JWT onto the Realtime socket BEFORE joining, so the server evaluates RLS as THIS user
+        //    (not anon) when deciding which change events to broadcast to us. setAuth() with no token pulls the access
+        //    token from the installed Auth plugin's live session — that's the realtime-auth contract. Without it the
+        //    socket would join as anon and the owner-private SELECT policy would suppress every event (silent no-op).
+        client.realtime.setAuth()
+
+        // Then join, then push the initial snapshot (after the ack so the join window can't drop an event).
+        channel.subscribe(blockUntilSubscribed = true)
+        trySend(all())
+
+        // 4) Cleanup on cancel — removeChannel is suspend, so run it on the long-lived cleanupScope, not this
+        //    (already-cancelling) channelFlow scope, or the unsubscribe would be cancelled before it completes.
+        awaitClose {
+            job.cancel()
+            cleanupScope.launch { client.realtime.removeChannel(channel) }
+        }
+    }.distinctUntilChanged()
 }

@@ -30,3 +30,12 @@ create policy "tasks are owner-private (select)" on public.tasks for select usin
 create policy "tasks are owner-private (insert)" on public.tasks for insert with check (owner_id = auth.uid());
 create policy "tasks are owner-private (update)" on public.tasks for update using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 create policy "tasks are owner-private (delete)" on public.tasks for delete using (owner_id = auth.uid());
+
+-- REALTIME: change broadcasts are OFF by default — add the table to the `supabase_realtime` publication so PostgREST/
+-- Realtime streams INSERT/UPDATE/DELETE over the WebSocket. RLS still applies on the socket: before broadcasting a row
+-- change, the Realtime server assumes the subscriber's JWT identity and evaluates the SELECT policy above, so each
+-- client only receives change events for ITS OWN rows. This backs SupabaseTaskRepository.observeAll()'s cross-client stream.
+alter publication supabase_realtime add table public.tasks;
+-- REPLICA IDENTITY FULL → the `old` record on UPDATE/DELETE carries the full prior row (not just the PK). Our observeAll
+-- re-queries the whole list on every event so it doesn't depend on the delta payload, but FULL keeps the events RLS-decodable.
+alter table public.tasks replica identity full;

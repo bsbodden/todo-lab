@@ -4,15 +4,19 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 
 /**
  * Builds a real supabase-kt [SupabaseClient] pointed at a running Supabase instance.
  *
  * This is the JVM-side proof of the KMPilot backend SWAP (`docs/backend/embeddable-vs-server.md`): the SAME ports the
  * local scaffold uses ([dev.kmpilot.todo.auth.AuthPort], [dev.kmpilot.todo.data.TaskRepository]) get a thin remote
- * adapter, with NO change to the app. The factory installs exactly the two plugins the adapters need:
+ * adapter, with NO change to the app. The factory installs exactly the three plugins the adapters need:
  *  - [Auth]      (GoTrue) — backs [SupabaseAuthAdapter] (sign up / in / out + the live session).
  *  - [Postgrest] (PostgREST over the `public` schema) — backs [SupabaseTaskRepository] (plain CRUD; RLS does ownership).
+ *  - [Realtime]  (Postgres-Changes over a WebSocket) — backs [SupabaseTaskRepository.observeAll]'s cross-client stream.
+ *    With [Auth] installed, supabase-kt propagates the signed-in user's access_token to the Realtime socket, so the
+ *    server evaluates RLS per-subscriber and only pushes change events the JWT may see (the owner-private rows).
  *
  * Params are injectable so the conformance test can target the local Docker stack (127.0.0.1:54321 + the anon key).
  */
@@ -21,5 +25,6 @@ object SupabaseClientFactory {
         createSupabaseClient(supabaseUrl = apiUrl, supabaseKey = anonKey) {
             install(Auth)
             install(Postgrest)
+            install(Realtime)
         }
 }
