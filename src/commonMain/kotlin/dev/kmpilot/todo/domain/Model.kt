@@ -26,4 +26,10 @@ data class Task(
     val isCompleted: Boolean = false,
     val isRepeating: Boolean = false,
     val alarmInterval: AlarmInterval? = null,
+    /**
+     * The owning user's id (the "your backend" ownership column). Null = unowned (the raw repo's default, so
+     * existing single-user code + the RepositoryContract are unaffected). [dev.kmpilot.todo.data.ScopedTaskRepository]
+     * stamps + enforces it locally; a real backend would enforce it server-side via Postgres RLS / Firestore rules.
+     */
+    val ownerId: String? = null,
 )

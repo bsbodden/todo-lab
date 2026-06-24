@@ -8,6 +8,7 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.router.stack.replaceAll
 import com.arkivanov.decompose.value.Value
+import dev.kmpilot.todo.auth.AuthPort
 import dev.kmpilot.todo.data.TaskRepository
 import dev.kmpilot.todo.domain.Task
 import dev.kmpilot.todo.domain.TaskLogic
@@ -99,6 +100,8 @@ class RootComponent(
     private val scope: CoroutineScope,
     private val repo: TaskRepository,
     private val clock: () -> LocalDateTime,
+    /** The identity port — exposed so [dev.kmpilot.todo.ui.App] can session-gate without touching entrypoints. */
+    val auth: AuthPort,
 ) : ComponentContext by ctx {
 
     private val nav = StackNavigation<Config>()

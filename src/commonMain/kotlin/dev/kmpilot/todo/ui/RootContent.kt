@@ -9,6 +9,7 @@ import dev.kmpilot.todo.presentation.RootComponent
 /** Renders the Decompose child stack — each config maps to its screen. */
 @Composable
 fun RootContent(root: RootComponent) {
+    val session by root.auth.session.collectAsState()
     Children(stack = root.stack) { child ->
         when (val instance = child.instance) {
             is RootComponent.Child.TaskList -> {
@@ -19,6 +20,8 @@ fun RootContent(root: RootComponent) {
                     onOpen = instance.component.onOpen,
                     onAdd = instance.component.onAdd,
                     onRetry = instance.component::retry,
+                    currentUserEmail = session?.email,
+                    onSignOut = root.auth::signOut,
                 )
             }
             is RootComponent.Child.AddTask -> AddTaskScreen(

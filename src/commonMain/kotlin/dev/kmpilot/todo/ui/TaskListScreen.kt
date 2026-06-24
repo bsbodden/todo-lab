@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,9 +43,20 @@ fun TaskListScreen(
     onOpen: (Long) -> Unit,
     onAdd: () -> Unit,
     onRetry: () -> Unit,
+    currentUserEmail: String? = null,
+    onSignOut: () -> Unit = {},
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Today") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(currentUserEmail ?: "Today") },
+                actions = {
+                    // Sign out → the app returns to LoginScreen, where you can sign in as someone else.
+                    // Simulated multi-user: sign out, sign in as B, see B's (empty / different) list.
+                    TextButton(onClick = onSignOut, modifier = Modifier.testTag("signOut")) { Text("Sign out") }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAdd, modifier = Modifier.testTag("add")) { Text("+") }
         },
